@@ -32,14 +32,14 @@ class FusionCriterion(Function):
     xy = target[:, :, :2] # xy coordinates of nJoints
     z = target[:, :, 2]   # depth of nJoints
     batchSize = target.size(0) # batchSize
-    output = torch.FloatTensor(1) * 0
+    output = torch.FloatTensor(1) * 0 # Initialize output
     for t in range(batchSize):   # Every sample
       s = xy[t].sum()            # Summation of all the image coordinates
       if s < ref.eps and s > - ref.eps: #Sup data All the data is small
         loss = ((input[t] - z[t]) ** 2).sum() / ref.nJoints # average all the depth of joints
         output += self.regWeight * loss
       else:
-        xy[t] = 2.0 * xy[t] / ref.outputRes - 1 # [0.0 1.0] - 1 = [-1.0 0]
+        xy[t] = 2.0 * xy[t] / ref.outputRes - 1 # [0.0 2.0] - 1 = [-1.0 1.0]
         for g in range(len(self.skeletonRef)): # len(self.skeletonRef) = 3
           E, num = 0, 0
           N = len(self.skeletonRef[g]) # N = 4
@@ -64,12 +64,13 @@ class FusionCriterion(Function):
     self.save_for_backward(input, target_)
     return output.cuda()
     
-  def backward(self, grad_output):
+  # Backward part
+  def backward(self, grad_output): # For this, the input element is grad_output
     input, target = self.saved_tensors
     target = target.view(target.size(0), ref.nJoints, 3)
     xy = target[:, :, :2]
     z = target[:, :, 2]
-    grad_input = torch.zeros(input.size())
+    grad_input = torch.zeros(input.size()) # Initialize the grad_input value
     batchSize = target.size(0)
     for t in range(batchSize):
       s = xy[t].sum()
